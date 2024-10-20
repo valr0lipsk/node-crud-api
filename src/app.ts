@@ -1,11 +1,11 @@
 import express, { Express, Request, Response, NextFunction } from "express";
-// import userRoutes from './routes/user.routes';
+import userRoutes from "./routes/user.route";
 
 const app: Express = express();
 
 app.use(express.json());
 
-// app.use('/api/users', userRoutes);
+app.use("/api/users", userRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ message: "Resource not found" });
