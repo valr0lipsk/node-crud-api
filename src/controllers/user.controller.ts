@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { validate as uuidValidate } from "uuid";
-import { userModel, User } from "../models/user.model";
+import { userModel } from "../models/user.model";
 
 export const userController = {
   getAllUsers: (_req: Request, res: Response) => {
