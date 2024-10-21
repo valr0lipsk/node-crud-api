@@ -1,7 +1,7 @@
 import cluster from "cluster";
 import os from "os";
 import { createServer, IncomingMessage, ServerResponse } from "http";
-import app from "./app";
+import { userController } from "./controllers/user.controller";
 import { userModel, User } from "./models/user.model";
 
 const numCPUs = os.cpus().length;
@@ -72,10 +72,16 @@ if (cluster.isPrimary) {
           proxyRes.pipe(res);
         });
 
+        proxyReq.on("error", (error: Error) => {
+          console.error("Proxy request error:", error);
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ message: "Internal Server Error" }));
+        });
+
         req.pipe(proxyReq);
       } else {
-        res.writeHead(500, { "Content-Type": "text/plain" });
-        res.end("No workers available");
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "No workers available" }));
       }
     }
   );
@@ -87,6 +93,7 @@ if (cluster.isPrimary) {
   const workerPort = Number(process.env.WORKER_PORT);
 
   process.on("message", (msg: IPCMessage) => {
+    console.log(`Worker ${process.pid} received message:`, msg);
     if (msg.type === "SYNC_STATE") {
       userModel["users"] = msg.state;
     } else if (msg.type === "STATE_UPDATE") {
@@ -151,7 +158,30 @@ if (cluster.isPrimary) {
     return result;
   };
 
-  const server = createServer(app);
+  const server = createServer(
+    async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader(
+          "Access-Control-Allow-Methods",
+          "GET, POST, PUT, DELETE, OPTIONS"
+        );
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+        if (req.method === "OPTIONS") {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+
+        await userController.handleRequest(req, res);
+      } catch (err) {
+        console.error(`Worker ${process.pid} error:`, err);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Internal Server Error" }));
+      }
+    }
+  );
 
   server.listen(workerPort, () => {
     console.log(`Worker ${process.pid} started on port ${workerPort}`);
