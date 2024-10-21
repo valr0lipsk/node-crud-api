@@ -41,6 +41,23 @@ class UserModel {
     this.users = this.users.filter((user) => user.id !== id);
     return this.users.length !== initialLength;
   }
+
+  setState(state: User[]): void {
+    this.users = state;
+  }
+
+  updateState(key: string, value: User | null): void {
+    if (value === null) {
+      this.users = this.users.filter((user) => user.id !== key);
+    } else {
+      const index = this.users.findIndex((user) => user.id === key);
+      if (index !== -1) {
+        this.users[index] = value;
+      } else {
+        this.users.push(value);
+      }
+    }
+  }
 }
 
 export const userModel = new UserModel();
